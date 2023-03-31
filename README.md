@@ -33,36 +33,36 @@ For example, if the teleop_node_dd.py file for the pipe repair repo was located 
 then run
 ```shell
 mv ~/ros2_ws/src/teleop_node_dd.py ~/pipe_repair_ws/src/ARPA-E_pipe_repair_robot/motion_planning/motion_planning/teleop_node_dd.py
-```shell
+```
 
 ## Launch the ROS2 Nodes
 Launch each of the following on different terminals (launch folder to come as soon as I figure that out)
 ```shell
 cd ~/pipe_repair_ws && rosdep install --from-paths src --ignore-src -r -y && colcon build && source install/setup.bash && ros2 run joy joy_node
-```shell
+```
 
 ```shell
 cd ~/pipe_repair_ws && rosdep install --from-paths src --ignore-src -r -y && colcon build && source install/setup.bash && ros2 run hebi_ros_driver hebi_ros_driver_node
-```shell
+```
 
 ```shell
 cd ~/pipe_repair_ws && rosdep install --from-paths src --ignore-src -r -y && colcon build && source install/setup.bash && ros2 run motion_planning teleop_node_dd
-```shell
+```
 
 To add the key commands from th piperobot_keycmds folder,
 
 ```shell
 cd ~/ros2_ws && colcon build --packages-select piperobot_keycmds && . install/setup.bash && ros2 run piperobot_keycmds teleop_robot_node
-```shell
+```
 
 To add realsense obstacle stop:
 ```shell
 cd ~/ros2_ws && colcon build --packages-select rs_hello_imshow && sourcedev && ros2 run rs_hello_imshow node
-```shell
+```
 
 ```shell
 cd ~/ros2_ws && colcon build --packages-select rs_hello_imshow && sourcedev && ros2 run rs_hello_imshow subscriber_node
-```shell
+```
 
 
 ## Acknowledgement
