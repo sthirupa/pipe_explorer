@@ -92,15 +92,17 @@ class JoystickController(Node):
         # s = 'Direction from input is ' + str(msg.data)
         # self.get_logger().info(s)
 
-        if msg.data == "0":
-            self._cmd_check = False
-        elif msg.data == "SLOW":
+        # Removed first msg.data check to have continuous movement for MRSD SVD on 20230417
+        # Commented out two lines below, changed elif "SlOW" to if "SLOW, changed else to elif != "0"
+        # if msg.data == "0":
+        #     self._cmd_check = False
+        if msg.data == "SLOW":
             self.speed_multiplier = 0.25
         elif msg.data == "MEDIUM" or msg.data == "NORMAL":
             self.speed_multiplier = 0.50
         elif msg.data == "FAST":
             self.speed_multiplier = 0.75
-        else:
+        elif msg.data != "0":
             self._cmd_check = True
 
             if msg.data == "UP":
@@ -132,8 +134,13 @@ class JoystickController(Node):
         _cmd_vel = Float64MultiArray()
 
         if self.lr_direction_multiplier == 0.0:
-            r_cmd_vel.data = -1.0 * self.fb_direction_multiplier * self.speed_multiplier * self.max_vel * self.stop_command
-            l_cmd_vel.data = self.fb_direction_multiplier * self.speed_multiplier * self.max_vel * self.stop_command
+            r_cmd_vel.data = -1.0 * self.fb_direction_multiplier * self.speed_multiplier * self.max_vel
+            l_cmd_vel.data = self.fb_direction_multiplier * self.speed_multiplier * self.max_vel
+
+            if self.fb_direction_multiplier > 0:
+                r_cmd_vel.data = r_cmd_vel.data * self.stop_command
+                l_cmd_vel.data = l_cmd_vel.data * self.stop_command
+
         elif self.fb_direction_multiplier == 0.0:
             r_cmd_vel.data = -1.0 * self.lr_direction_multiplier * self.speed_multiplier * self.max_vel * self.stop_command
             l_cmd_vel.data = -1.0 * self.lr_direction_multiplier * self.speed_multiplier * self.max_vel * self.stop_command
