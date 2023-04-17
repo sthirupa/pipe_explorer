@@ -17,7 +17,7 @@ class HelloRealSenseSubscriber : public rclcpp::Node
       // timer_ = this->create_wall_timer(500ms, std::bind(&HelloRealSenseSubscriber::timer_callback, this));
       publisher_warn_ = this->create_publisher<std_msgs::msg::String>("/threshold_warning", 10);
       timer_warn_ = this->create_wall_timer(500ms, std::bind(&HelloRealSenseSubscriber::timer_callback, this));
-      subscription_ = this->create_subscription<std_msgs::msg::String>("realsense_dist", 10, std::bind(&HelloRealSenseSubscriber::nodesubscriber_callback, this, std::placeholders::_1));
+      subscription_ = this->create_subscription<std_msgs::msg::String>("realsense_dist", 5, std::bind(&HelloRealSenseSubscriber::nodesubscriber_callback, this, std::placeholders::_1));
     }
 
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_;
@@ -38,18 +38,30 @@ class HelloRealSenseSubscriber : public rclcpp::Node
         if(object_distance > 0.01)
         {
           RCLCPP_INFO(this->get_logger(), "WARNING: OBJECT DETECTED AHEAD!");
+          threshold_consec_count++;
         }
 
-        threshold_consec_count++;
+
         if(threshold_consec_count >= threshold_consec_count_MAX)
         {
           warning_stop = true;
+          if(threshold_consec_count > threshold_consec_count_MAX)
+          {
+            threshold_consec_count = threshold_consec_count_MAX + 1;
+          }
         }
       }
       else
       {
-        threshold_consec_count = 0;
-        warning_stop = false;
+        threshold_consec_count--;
+        if(threshold_consec_count <= 0)
+        {
+          warning_stop = false;
+          if(threshold_consec_count < 0)
+          {
+            threshold_consec_count = 0;
+          }
+        }
       }
     }
 

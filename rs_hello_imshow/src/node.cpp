@@ -80,8 +80,8 @@ class HelloRealSense : public rclcpp::Node
 
       // Start pipeline
       p.start();
-      publisher_ = this->create_publisher<std_msgs::msg::String>("realsense_dist", 10);
-      timer_ = this->create_wall_timer(500ms, std::bind(&HelloRealSense::timer_callback, this));
+      publisher_ = this->create_publisher<std_msgs::msg::String>("realsense_dist", 5);
+      timer_ = this->create_wall_timer(200ms, std::bind(&HelloRealSense::timer_callback, this));
     }
 
     // Create a Pipeline - this serves as a top-level API for streaming and processing frames
