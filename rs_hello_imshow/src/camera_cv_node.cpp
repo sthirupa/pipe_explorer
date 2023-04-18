@@ -64,7 +64,11 @@ class HelloRealSense : public rclcpp::Node
       }
 
       // Start pipeline
-      p.start();
+      cfg.enable_stream(RS2_STREAM_DEPTH);
+      cfg.enable_stream(RS2_STREAM_COLOR);
+      p.start(cfg);
+      // align_to_depth = &(RS2_STREAM_DEPTH);
+      // align_to_color(RS2_STREAM_COLOR);
       publisher_ = this->create_publisher<std_msgs::msg::String>("realsense_dist", 5);
       // img_publisher_ = this->create_publisher<sensor_msgs::msg::Image>("/realsense_image", 5); OPTION NOT USED
       img_pub_ = image_transport::create_publisher(this, "/realsense_image", rmw_qos_profile_default);
@@ -90,6 +94,8 @@ class HelloRealSense : public rclcpp::Node
     // rs2::device dev; NOT NEEDED
     rs2::config cfg;
     std::string json_filename;
+    // rs2::align *align_to_depth;
+    // rs2::align *align_to_color;
 
     // Tutorial - Save Image to Disk + Capture
     // rs2::colorizer color_map;
@@ -131,11 +137,15 @@ class HelloRealSense : public rclcpp::Node
     rs2::pointcloud pc;
     rs2::points points;
 
+    // rs2::colorizer color_filter;
+    // rs2::threshold_filter thr_filter;
+    // rs2::disparity_transform depth_to_disparity(1);
+
     Mat pub_img, gray, gaus, lapl, dst;
     std_msgs::msg::String message = std_msgs::msg::String();
     std_msgs::msg::Header header;
-    // sensor_msgs::msg::Image::Ptr img_msg;
-    sensor_msgs::msg::Image img_msg;
+    // sensor_msgs::msg::Image::Ptr img_msg; // img_msg PTR option
+    sensor_msgs::msg::Image img_msg; // img_msg OPTION
     cv_bridge::CvImage img_cvimg;
     bool a = true;
 
@@ -143,14 +153,31 @@ class HelloRealSense : public rclcpp::Node
     {
       register_glfw_callbacks(_app, _app_state);
       frames = p.wait_for_frames();
+
+      // frames = align_to_depth->process(frames);
+
       auto color = frames.get_color_frame();
       pc.map_to(color);
 
       rs2::depth_frame depth_fr = frames.get_depth_frame();
       points = pc.calculate(depth_fr);
       _app_state.tex.upload(color);
+
+      // colorizer options
+      // depth_fr = thr_filter.process(depth_fr);
+      // depth_fr = depth_to_disparity.process(depth_fr);
+      // depth_fr = disparity_to_depth.process(depth_fr);
+      // depth_fr = color_filter.process(depth_fr);
+      // thr_filter.set_option(RS2_OPTION_MIN_DISTANCE, 0.10f);
+      // thr_filter.set_option(RS2_OPTION_MAX_DISTANCE, 3.0f);
+      // color_filter.set_option(RS2_OPTION_HISTOGRAM_EQUALIZATION_ENABLED, 0);
+      // color_filter.set_option(RS2_OPTION_COLOR_SCHEME, 9.0f);
+      // color_filter.set_option(RS2_OPTION_MAX_DISTANCE, 3.0f);
+      // color_filter.set_option(RS2_OPTION_MIN_DISTANCE, 0.10f);
+
       draw_pointcloud(_width, _height, _app_state, points);
 
+      // IGNORE THIS
       // auto vertices = points.get_vertices();
       // auto tex_coords = points.get_texture_coordinates();
       // for (int i = 0; i < points.size(); i++) {
@@ -168,18 +195,18 @@ class HelloRealSense : public rclcpp::Node
       std::cout << "1" << std::endl;
 
       pub_img = cv::Mat(Size(width, height), CV_8UC3, (void*)depth_fr.get_data(), Mat::AUTO_STEP);
-      if (a) {
-        // img_msg = cv_bridge::CvImage(header, "bgr8", pub_img).toImageMsg();
-        img_cvimg = cv_bridge::CvImage(header, "bgr8", pub_img);
-        img_msg = *img_cvimg.toImageMsg();
-        std::cout << "2" << std::endl;
-        a = !a;
-      } else {
-        img_cvimg.image = pub_img;
-        std::cout << "2" << std::endl;
-        img_cvimg.toImageMsg(img_msg);
-      }
 
+      // if (a) {
+      //   // img_msg = cv_bridge::CvImage(header, "bgr8", pub_img).toImageMsg(); // img_msg OPTION
+      //   img_cvimg = cv_bridge::CvImage(header, "bgr8", pub_img); // img_msg PTR option
+      //   img_msg = *img_cvimg.toImageMsg();
+      //   std::cout << "2" << std::endl;
+      //   a = !a;
+      // } else {
+      //   img_cvimg.image = pub_img;
+      //   std::cout << "2" << std::endl;
+      //   img_cvimg.toImageMsg(img_msg);
+      // }
 
       // cvtColor(pub_img, gray, COLOR_BGR2GRAY);
       // pub_img.copyTo(gray); GaussianBlur(gray, gaus, Size(3,3), 0, 0, BORDER_DEFAULT);
@@ -201,17 +228,19 @@ class HelloRealSense : public rclcpp::Node
         RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
         publisher_->publish(message);
 
-        // cv_bridge::CvImagePtr cv_ptr;
+        // cv_bridge::CvImagePtr cv_ptr; NOT NEEDED
         header.stamp = this->now();
         std::cout << "3" << std::endl;
         // img_msg = cv_bridge::CvImage(header, "bgr8", pub_img).toImageMsg(); DONE IN get_distance()
         // img_publisher_->publish(*img_msg.get()); OPTION NOT USED
-        if (pub_img.empty()) {
-          std::cout << "pub_img empty!" << std::endl;
-        } else {
-          std::cout << "sensor ptr height: " << img_msg.height << std::endl; // img_msg OPTION
-          // std::cout << "sensor ptr height: " << img_cvimg.toImageMsg()->height << std::endl;
-        }
+
+        // if (pub_img.empty()) {
+        //   std::cout << "pub_img empty!" << std::endl;
+        // } else {
+        //   std::cout << "sensor ptr height: " << img_msg.height << std::endl; // img_msg OPTION
+        //   // std::cout << "sensor ptr height: " << img_cvimg.toImageMsg()->height << std::endl; // img_msg PTR option
+        // }
+
         // img_pub_.publish(img_msg);
         std::cout << "4" << std::endl;
       }

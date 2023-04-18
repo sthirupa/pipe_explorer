@@ -32,11 +32,11 @@ class HelloRealSenseSubscriber : public rclcpp::Node
     void nodesubscriber_callback(const std_msgs::msg::String::SharedPtr msg)
     {
       object_distance = std::stof(msg->data.c_str());
-      RCLCPP_INFO(this->get_logger(), "Recorded distance from Camera to Object in cm:  %s", msg->data.c_str());
       if((object_distance < threshold_distance && object_distance > 0.01) || object_distance == 0.00)
       {
         if(object_distance > 0.01)
         {
+          RCLCPP_INFO(this->get_logger(), "Recorded distance from Camera to Object in cm:  %s", msg->data.c_str());
           RCLCPP_INFO(this->get_logger(), "WARNING: OBJECT DETECTED AHEAD!");
           threshold_consec_count++;
         }
