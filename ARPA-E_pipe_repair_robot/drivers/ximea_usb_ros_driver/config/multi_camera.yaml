@@ -1,0 +1,47 @@
+camera1:
+  ros_parameters:
+    serial_number : 'UPCBS2110003'
+    frame_rate : 1000.0
+    frame_id : 'camera1'
+    extrinsic_calibration : 
+      position : 
+        x : 0.0
+        y : 0.0
+        z : 0.0
+      orientation :
+        x : 0.0
+        y : 0.0
+        z : 0.0
+        w : 0.0
+
+camera2:
+  ros_parameters:
+    serial_number : 'UPCBS2110019'
+    frame_rate : 1000.0
+    frame_id : 'camera2'
+    extrinsic_calibration : 
+      position : 
+        x : 0.0
+        y : 0.0
+        z : 0.0
+      orientation :
+        x : 0.0
+        y : 0.0
+        z : 0.0
+        w : 0.0
+
+camera3:
+  ros_parameters:
+    serial_number : 'UPCBS2110021'
+    frame_rate : 1000.0
+    frame_id : 'camera3'
+    extrinsic_calibration : 
+      position : 
+        x : 0.0
+        y : 0.0
+        z : 0.0
+      orientation :
+        x : 0.0
+        y : 0.0
+        z : 0.0
+        w : 0.0
