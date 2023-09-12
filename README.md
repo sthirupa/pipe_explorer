@@ -64,6 +64,13 @@ cd ~/ros2_ws && colcon build --packages-select rs_hello_imshow && sourcedev && r
 cd ~/ros2_ws && colcon build --packages-select rs_hello_imshow && sourcedev && ros2 run rs_hello_imshow subscriber_node
 ```
 
+## Onboard Computing actions
+ssh to the onboard computing unit (the NUC) by using the command
+'''shell
+ssh repair_robot@192.168.0.104
+'''
+**but check the IP address in the event of changes**
+password: biorobotics
 
 ## Acknowledgement
 The repository was created to fulfill the need for a package to use a pipe repair robot for autonomous exploration 
