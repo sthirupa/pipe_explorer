@@ -66,9 +66,9 @@ cd ~/ros2_ws && colcon build --packages-select rs_hello_imshow && sourcedev && r
 
 ## Onboard Computing actions
 ssh to the onboard computing unit (the NUC) by using the command
-'''shell
+```shell
 ssh repair_robot@192.168.0.104
-'''
+```
 **but check the IP address in the event of changes**
 password: biorobotics
 
