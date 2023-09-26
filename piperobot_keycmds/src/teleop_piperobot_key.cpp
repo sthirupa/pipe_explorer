@@ -29,6 +29,7 @@
 #define KEYCODE_E 0x65
 #define KEYCODE_R 0x72
 #define KEYCODE_T 0x74
+#define KEYCODE_F 0x66
 
 using namespace std::chrono_literals;
 
@@ -103,6 +104,11 @@ class RobotKeyboardReader
                     else if (buffer.Event.KeyEvent.wVirtualKeyCode == 0x54)
                     {
                       *c = KEYCODE_T;
+                      return;
+                    }
+                    else if (buffer.Event.KeyEvent.wVirtualKeyCode == 0x46)
+                    {
+                      *c = KEYCODE_F
                       return;
                     }
                 }
@@ -191,7 +197,7 @@ void TeleopRobot::timer_callback()
     std::string a = "Publishing the message: " + cmd_msg;
     RCLCPP_INFO(_nh->get_logger(), a);
 
-    cmd_msg = "0";
+    // cmd_msg = "0";
 }
 
 int TeleopRobot::key_loop()
@@ -248,6 +254,10 @@ int TeleopRobot::key_loop()
             case KEYCODE_R:
                 RCLCPP_DEBUG(_nh->get_logger(), "R");
                 cmd_msg = "MEDIUM";
+                break;
+            case KEYCODE_F:
+                RCLCPP_DEBUG(_nh->get_logger(), "F");
+                cmd_msg = "0";
                 break;
             // default:
             //     RCLCPP_INFO(_nh->get_logger(), "NO-INPUT");
