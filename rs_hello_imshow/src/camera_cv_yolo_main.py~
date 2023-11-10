@@ -1,0 +1,51 @@
+from ultralytics import YOLO
+import os
+import cv2
+from PIL import Image
+# from sensor_msgs.msg import Image
+
+# Load the trained YOLOv8 Nano model
+model = YOLO(r"/home/ros2_ws/src/pipe_explorer/rs_hello_imshow/src/YOLOv8 Code/train32/weights/best.pt")
+
+# # Directory containing the test images
+# images_dir = r"/home/mrsd/Desktop/RS Del Code-20230919T000925Z-001/RoboSpect Code/YOLO V8/imagesfortest"
+
+# # List all image files in the directory
+# image_files = [f for f in os.listdir(images_dir) if f.endswith(('.jpg', '.jpeg', '.png', '.bmp'))]
+
+# i = 1
+
+def main(rgb_img):
+
+    # Process each image in the folder
+    # for image_file in image_files:
+    # Path to the current image
+    # image_path = os.path.join(images_dir, image_file)
+    # Load the uploaded image
+    # img = cv2.imread(image_path)
+
+    results = model.predict(rgb_img)
+    result = results[0]
+
+    # Check if there are bounding boxes
+    if result.boxes:
+        # print(f"Bounding boxes found in {image_file}")
+        for box in result.boxes:
+            class_id = result.names[box.cls[0].item()]
+            cords = box.xyxy[0].tolist()
+            cords = [round(x) for x in cords]
+            conf = round(box.conf[0].item(), 2)
+            # print("Object type:", class_id)
+            # print("Coordinates:", cords)
+            # print("Probability:", conf)
+            # print("---")
+
+        # Display the image with bounding boxes
+        Image.fromarray(result.plot()[:, :, ::-1]).show()
+        return True
+
+    else:
+        return False
+        # print(f"No bounding boxes found in {image_file}")
+
+        # i = i+1    

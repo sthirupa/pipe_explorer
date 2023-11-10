@@ -60,9 +60,17 @@ target_include_directories(camera_cv_node PUBLIC include ${OPENGL_INCLUDE_DIR} $
   $<INSTALL_INTERFACE:include>)
 target_link_libraries( camera_cv_node realsense2 GL glut GLU OpenGL glfw ${OpenCV_LIBS} )
 
+add_executable(camera_cv_topics_node src/camera_cv_topics_node.cpp)
+ament_target_dependencies(camera_cv_topics_node rclcpp std_msgs cv_bridge sensor_msgs OpenGL image_transport )
+target_include_directories(camera_cv_topics_node PUBLIC include ${OPENGL_INCLUDE_DIR} ${GLEW_INCLUDE_DIRS} ${GLFW_INCLUDE_DIRS}
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_link_libraries( camera_cv_topics_node realsense2 GL glut GLU OpenGL glfw ${OpenCV_LIBS} )
 
 
-install(TARGETS node subscriber_node camera_cv_node
+
+
+install(TARGETS node subscriber_node camera_cv_node camera_cv_topics_node
   DESTINATION lib/${PROJECT_NAME})
 
 

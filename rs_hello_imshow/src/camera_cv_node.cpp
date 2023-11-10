@@ -46,7 +46,9 @@ class HelloRealSense : public rclcpp::Node
       p.start();
       rs2::pipeline_profile profile = p.get_active_profile();
       p.stop();
-      json_filename = "src/rs_hello_imshow/src/preset_custom.json";
+      json_filename =
+	// "src/rs_hello_imshow/src/preset_depth_circles.json";
+	"src/rs_hello_imshow/src/preset_custom.json";
 
       std::ifstream t;
       t.open(json_filename, std::ifstream::in);
