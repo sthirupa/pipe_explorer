@@ -27,9 +27,10 @@ class JoystickController(Node):
         self._joy_sub = self.create_subscription(Joy, '/joy', self._joy_callback, 1)
         self._stop_sub = self.create_subscription(String, '/threshold_warning', self._stop_callback, 10)
         self._keyboard_sub = self.create_subscription(String, '/robot_key_cmd', self._keyboard_callback, 1)
+        self._imu_sub = self.create_subscription(String, '/camera_imu_pose_est', self._imu_callback, 5)
 
-        timer_period = 1/100 # secs
-        self._timer = self.create_timer(timer_period, self._cmd_callback)
+        self.timer_period = 1/100 # secs
+        self._timer = self.create_timer(self.timer_period, self._cmd_callback)
         self._cmd_check = False
 
         self.serial_port_open = False
@@ -43,6 +44,15 @@ class JoystickController(Node):
         self.top_wheel_cmd = 'S'
         self.prev_cmd = 'S'
         self.stop_command = 1.0
+        
+        self.vel_slow = 0.25
+        self.vel_med = 0.50
+        self.vel_fast = 0.90
+        self.traveled_dist = 0.0
+        self.latest_time = self.get_clock().now()
+
+        self.imu_estimate = 0.0
+        self.deg = 0.0
 
     def _open_writer(self):
 
@@ -87,6 +97,12 @@ class JoystickController(Node):
         else: self.stop_command = 1.0
 
 
+    def _imu_callback(self, msg):
+        """ Callback from RealSense IMU pose estimate node """
+
+        self.imu_estimate = float(msg.data)
+
+
     def _keyboard_callback(self, msg):
         """Callback from keyboard buttons system"""
         # s = 'Direction from input is ' + str(msg.data)
@@ -94,15 +110,16 @@ class JoystickController(Node):
 
         # Removed first msg.data check to have continuous movement for MRSD SVD on 20230417
         # Commented out two lines below, changed elif "SlOW" to if "SLOW, changed else to elif != "0"
-        # if msg.data == "0":
-        #     self._cmd_check = False
-        if msg.data == "SLOW":
-            self.speed_multiplier = 0.25
+        # Undid that same day bc we need a manual stop and sending "0" will serve as that
+        if msg.data == "0":
+            self._cmd_check = False
+        elif msg.data == "SLOW":
+            self.speed_multiplier = self.vel_slow
         elif msg.data == "MEDIUM" or msg.data == "NORMAL":
-            self.speed_multiplier = 0.50
+            self.speed_multiplier = self.vel_med
         elif msg.data == "FAST":
-            self.speed_multiplier = 0.75
-        elif msg.data != "0":
+            self.speed_multiplier = self.vel_fast
+        else:
             self._cmd_check = True
 
             if msg.data == "UP":
@@ -133,6 +150,8 @@ class JoystickController(Node):
         l_cmd_vel = Float64()
         _cmd_vel = Float64MultiArray()
 
+        now = self.get_clock().now()
+        
         if self.lr_direction_multiplier == 0.0:
             r_cmd_vel.data = -1.0 * self.fb_direction_multiplier * self.speed_multiplier * self.max_vel
             l_cmd_vel.data = self.fb_direction_multiplier * self.speed_multiplier * self.max_vel
@@ -160,11 +179,11 @@ class JoystickController(Node):
         if self._cmd_check:
             self._r_cmd_vel_pub.publish(r_cmd_vel)
             self._l_cmd_vel_pub.publish(l_cmd_vel)
-            speedreport = self.speed_multiplier * 100
+            speedreport = self.speed_multiplier * 100 * self.stop_command
             div = self.speed_multiplier * self.max_vel
             rightreport = -1 * r_cmd_vel.data / div
             leftreport = l_cmd_vel.data / div
-            abs_velocity = float(abs(r_cmd_vel.data))
+            abs_velocity = float(abs(r_cmd_vel.data)) * self.stop_command * 2.3/self.max_vel
 
             if rightreport > 0:
                 rightmsg = 'RIGHT-side Wheels driving FORWARD'
@@ -177,15 +196,24 @@ class JoystickController(Node):
                 leftmsg = 'LEFT-side Wheels driving BACKWARD'
 
             self.get_logger().info('Speed setting in percentage of max: %f' % speedreport)
-            self.get_logger().info(leftmsg)
-            self.get_logger().info(rightmsg)
-            self.get_logger().info('Published velocity (both sides): %f' % abs_velocity)
+            # self.get_logger().info(leftmsg)
+            # self.get_logger().info(rightmsg)
+            # self.get_logger().info('Published velocity (both sides): %f' % abs_velocity)
+            vel = abs_velocity * self.fb_direction_multiplier
+            self.get_logger().info('Velocity of the vehicle: %f cm/s' % vel)
             # self.get_logger().info('Published velocity (right): %f' % r_cmd_vel.data)
             # self.get_logger().info('Published velocity (left): %f' % l_cmd_vel.data)
-            self.get_logger().info(' ')
 
             _cmd_vel.data = [r_cmd_vel.data, l_cmd_vel.data]
             self._cmd_vel_pub.publish(_cmd_vel)
+
+            # self.traveled_dist += self.timer_period * abs_velocity * self.fb_direction_multiplier
+            now = self.get_clock().now()
+            time_msg = (now - self.latest_time).to_msg()
+            dt = time_msg.sec + time_msg.nanosec / 10**9
+            self.traveled_dist +=  dt * vel
+            self.deg += 2.0 * dt * self.lr_direction_multiplier * self.speed_multiplier * self.stop_command
+
         else:
             r_cmd_vel.data = 0.0
             l_cmd_vel.data = 0.0
@@ -194,6 +222,17 @@ class JoystickController(Node):
 
             _cmd_vel.data = [r_cmd_vel.data, l_cmd_vel.data]
             self._cmd_vel_pub.publish(_cmd_vel)
+
+
+            self.get_logger().info('Speed setting in percentage of max: STOPPED')
+            self.get_logger().info('Published velocity (both sides): 0 cm/s')
+        
+        self.get_logger().info('Heading Angle from initial trajectory: %f degrees' % self.deg)
+        self.latest_time = now
+        self.get_logger().info('Total distance from start (origin): %f cm' % self.traveled_dist)
+        if self.imu_estimate != 0.0:
+            self.get_logger().info('IMU-calculated distance from start (origin): %f' % self.imu_estimate)
+        self.get_logger().info('\n \n \n')
 
 
 def main():
