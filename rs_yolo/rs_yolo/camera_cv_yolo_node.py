@@ -14,7 +14,7 @@ class CVYoloNode(Node):
     def __init__(self):
         super().__init__('camera_cv_yolo_node')
         
-        self._warning_pub = self.create_publisher(String, '/threshold_warning', 1)
+        self._warning_pub = self.create_publisher(String, '/yolo_signal', 1)
         self._yolo_sub = self.create_subscription(Image, '/color/image_raw', self.yolo_callback, 10)
         self.cv_bridge = CvBridge()
         self._coordinates_pub = self.create_publisher(Float64MultiArray, '/box_coordinates', 10)
@@ -29,7 +29,6 @@ class CVYoloNode(Node):
             # self.get_logger().error("Error converting Image message: %s" % str(e))
             print("Error converting Image msg: %s" % str(e))
 
-        # Maybe remove the warning_msg?
         self._warning_pub.publish(warning_msg)
         if coordinates:
             coordinates_msg = Float64MultiArray()

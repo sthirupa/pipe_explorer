@@ -87,6 +87,7 @@ class RealSenseCV : public rclcpp::Node
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
     rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr coordinates_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr color_subscription_;
+    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_subscription_;
     float dist_to_center = 0;
 
     int width = 600;
@@ -107,7 +108,6 @@ class RealSenseCV : public rclcpp::Node
     {
       
       Mat pub_img, gray, gaus, lapl, dst;
-      // bool a = true;
 
       // pub_img = cv::Mat(Size(width, height), CV_8UC3, (void*)depth_fr.get_data(), Mat::AUTO_STEP);
       pub_img = cv_bridge::toCvCopy(msg, "16UC1")->image;
@@ -120,11 +120,45 @@ class RealSenseCV : public rclcpp::Node
       // gaus.copyTo(gray);
       Laplacian(gaus, lapl, 3, 3, 3, 0, BORDER_DEFAULT);
       convertScaleAbs(lapl, dst);
+
+      /*
+      std::vector<Vec3f> circles;
+      HoughCircles(dst, circles, HOUGH_GRADIENT, 1, pub_img.cols/10, 140, 40, 20, 150);
+      int largest_rad = 90;
+      int best_row = std::round(dst.rows/2);
+      int best_col = std::round(dst.cols/2);
+      int best_sum = 100;
+      int curr_row, curr_col, curr_rad;
+      for (size_t i = 0; i < circles.size(); i++) {
+	curr_row = circles[i][0];
+	curr_col = circles[i][1];
+	curr_rad = circles[i][2];
+	circle(dst, Point(curr_row, curr_col), curr_rad, Scalar(255,0,255), 1);
+
+	auto dr = std::abs(best_row - curr_row);
+	auto dc = std::abs(best_col - curr_col);
+
+	if (curr_rad >= largest_rad && dr+dc < best_sum) {
+	  largest_rad = curr_rad;
+	  best_sum = dr + dc;
+	  best_row = curr_row;
+	  best_col = curr_col;
+	}
+      }
+      */
+
+      // for (int r = 1; r < pub_img.rows - 1; r++) {
+      //   for (int c = 1; r < pub_img.cols - 1; c++) {
+      //     auto val_pub = pub_img.at<uchar>(r,c);
+      //     auto edge_pub = dst.at<uchar>(r,c);
+	     // TODO - use largest_rad and center to identify where boundaries occur and use that as an approx for nearby distances
+      //   }
+      // }
+      
       // std::cout << "loop" << std::endl;
       imshow(depth_window_name, dst);
       waitKey(3);
-
-      // for (int r = 1; r < pub_img.rows()
+      
     }
 
     void show_rgb_img(const sensor_msgs::msg::Image::SharedPtr msg)

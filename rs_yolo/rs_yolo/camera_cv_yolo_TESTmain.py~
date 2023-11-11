@@ -29,31 +29,13 @@ def yolo_main(rgb_img):
 
     results1 = model1.predict(rgb_img)
     result1 = results1[0]
-
-    results2 = model2.predict(rgb_img)
-    result2 = results2[0]
-
     total_cords = []
-    result = None
 
     # Check if there are bounding boxes
-    if result1.boxes or result2.boxes :
+    if result1.boxes:
         # print(f"Bounding boxes found in {image_file}")
-
-        if not result1.boxes:
-            result = result2
-        elif not result2.boxes:
-            result = result1
-        else:
-            maxprob1 = max([round(box1.conf[0].item(), 2) for box1 in result1.boxes])
-            maxprob2 = max([round(box2.conf[0].item(), 2) for box2 in result2.boxes])
-            if maxprob1 >= maxprob2:
-                result = result1
-            else:
-                result = result2
-                
-        for box in result.boxes:
-            class_id = result.names[box.cls[0].item()]
+        for box in result1.boxes:
+            class_id = result1.names[box.cls[0].item()]
             cords = box.xyxy[0].tolist()
             cords = [float(round(x)) for x in cords]
             conf = round(box.conf[0].item(), 2)
@@ -66,16 +48,41 @@ def yolo_main(rgb_img):
             print("---")
 
         # Display the image with bounding boxes
-        # Image.fromarray(result.plot()[:, :, ::-1]).show()
+        # Image.fromarray(result1.plot()[:, :, ::-1]).show()
         # time.sleep(2)
         # for proc in psutil.process_iter():
         #     if proc.name() == "display" or proc.name()[-4:] == ".PNG":
-        #         proc.kill()
-        
+        #         proc.kill()                
         return '1', total_cords
+    
+    else:        
+        results2 = model2.predict(rgb_img)
+        result2 = results2[0]
 
-    else:
-        return '0', [float(1), float(1), float(2), float(2)]
-        # print(f"No bounding boxes found in {image_file}")
+        if result2.boxes:
+            for box in result2.boxes:
+                class_id = result2.names[box.cls[0].item()]
+                cords = box.xyxy[0].tolist()
+                cords = [float(round(x)) for x in cords]
+                conf = round(box.conf[0].item(), 2)
+
+                total_cords += cords
+                
+                print("Object type:", class_id)
+                print("Coordinates:", cords)
+                print("Probability:", conf)
+                print("---")
+
+            # Display the image with bounding boxes
+            # Image.fromarray(result2.plot()[:, :, ::-1]).show()
+            # time.sleep(2)
+            # for proc in psutil.process_iter():
+            #     if proc.name() == "display" or proc.name()[-4:] == ".PNG":
+            #         proc.kill()                    
+            return '1', total_cords
+
+        else:
+            return '0', [float(1), float(1), float(2), float(2)]
+            # print(f"No bounding boxes found in {image_file}")
 
 # i = i+1    
