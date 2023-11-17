@@ -29,7 +29,8 @@ class HebiROS2Driver(Node):
         self.robot_fbk = hebi.GroupFeedback(self.robot.size)
 
         self.cmd_vel = np.array([0.0, 0.0])
-        
+
+        self._encoder_pub = self.create_publisher(Float64MultiArray, '/repair_robot/encoder', 1)
         self._joint_states_pub = self.create_publisher(JointState, '/repair_robot/joint_states', 1)
         # self._feedback_pub = self.create_publisher(HebiFeedback, '/repair_robot/feedback', 1)
         self._cmd_vel_sub = self.create_subscription(Float64MultiArray, '/repair_robot/cmd_vel', self._cmd_callback, 1)
@@ -72,6 +73,10 @@ class HebiROS2Driver(Node):
         # motor_fbk.processor_temperature = self.robot_fbk.processor_temperature.tolist()
         # motor_fbk.motor_winding_temperature = self.robot_fbk.motor_winding_temperature.tolist()
         # self._feedback_pub.publish(motor_fbk)
+        encoder = Float64MultiArray()
+        encoder.data = joint_states.position
+        self._encoder_pub.publish(encoder)
+        print('position: ', self.robot_fbk.position.tolist())
 
 
 def main():

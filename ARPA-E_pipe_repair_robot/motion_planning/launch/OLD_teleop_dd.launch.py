@@ -3,7 +3,7 @@ from launch_ros.actions import Node
 
 def _check_joystick():
     # TODO Check if something like this is possible or not
-    return False
+    return True
 
 def generate_launch_description():
 
@@ -23,11 +23,6 @@ def generate_launch_description():
         executable='teleop_node_dd'
     )
 
-    imu_extract_node = Node(
-        package='motion_planning',
-        executable='imu_extractor'
-    )
-
     if flag: 
         print('launching joystick')
         joystick_node = Node(
@@ -38,7 +33,5 @@ def generate_launch_description():
 
     ld.add_action(driver_node)
     ld.add_action(teleop_node_dd)
-    ld.add_action(imu_extract_node)
     
     return ld
-

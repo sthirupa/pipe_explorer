@@ -48,6 +48,7 @@ class RealSenseCV : public rclcpp::Node
   public:
     RealSenseCV(): Node("camera_cv_topics_node")
     {
+      
       // Serializable Device Setup
       p.start();
       rs2::pipeline_profile profile = p.get_active_profile();
@@ -66,10 +67,11 @@ class RealSenseCV : public rclcpp::Node
         serializable.load_json(content);
         t.close();
       }
+      
 
       namedWindow(depth_window_name);
       namedWindow(rgb_window_name);
-
+      
       publisher_ = this->create_publisher<std_msgs::msg::String>("realsense_dist", 5);
       // img_publisher_ = this->create_publisher<sensor_msgs::msg::Image>("/realsense_image", 5); OPTION NOT USED
       // img_pub_ = image_transport::create_publisher(this, "/realsense_image", rmw_qos_profile_default); // OPTION NOT USED
@@ -113,6 +115,7 @@ class RealSenseCV : public rclcpp::Node
     float* box_cords = new float[12]();
     int left_oncoming_count = 0;
     int right_oncoming_count = 0;
+    int turn_imminent_count = 0;
     std::chrono::high_resolution_clock::time_point time_start;
     std::chrono::seconds time_curr;
     std::chrono::seconds time_start_turn;
@@ -123,7 +126,7 @@ class RealSenseCV : public rclcpp::Node
 
     void get_distance(const sensor_msgs::msg::Image::SharedPtr msg)
     {
-      std::cout << std::endl;
+      // std::cout << std::endl;
       
       Mat pub_img, gray, gaus, lapl, dst, disp_dst;
 
@@ -141,7 +144,7 @@ class RealSenseCV : public rclcpp::Node
       cvtColor(dst, disp_dst, COLOR_GRAY2BGR);
 
       std::vector<Vec3f> circles;
-      // std::cout << "started HoughCircles" << std::endl;
+      std::cout << "started HoughCircles" << std::endl;
       HoughCircles(dst, circles, HOUGH_GRADIENT, 1, pub_img.cols/30, 140, 42, 20, 150); // 140 40 20 150
       std::cout << "# of circles detected: " << std::to_string(circles.size()) << std::endl;            
 
@@ -150,6 +153,7 @@ class RealSenseCV : public rclcpp::Node
       int best_col = std::round(dst.cols/2);
       int best_sum = 100;
       int curr_row, curr_col, curr_rad;
+      bool inner_circle_found = false;
       for (size_t i = 0; i < circles.size(); i++) {
 	curr_col = circles[i][0];
 	curr_row = circles[i][1];
@@ -167,10 +171,12 @@ class RealSenseCV : public rclcpp::Node
 	}
 	
         // Determine if we are close to the turn
-	if (curr_rad < 101 && curr_rad > 35 && std::abs(curr_row - best_row) < 0.10*big_rad) {
-	  if (curr_col < best_col) {
+	if (curr_rad < 89 && curr_rad > 35 && std::abs(curr_row - best_row) < 0.10*big_rad) {
+	  inner_circle_found = true;
+	  turn_imminent_count = 0;
+	  if (curr_col < best_col - 20) {
 	    left_oncoming_count++;
-	  } else if (curr_col > best_col) {
+	  } else if (curr_col > best_col + 20) {
 	    right_oncoming_count++;
 	  }
 	}
@@ -180,6 +186,10 @@ class RealSenseCV : public rclcpp::Node
       }
       std::cout << std::endl << "Best pipe circle (col,row,rad): " << std::to_string(best_col) << " "
 		<< std::to_string(best_row) << " " << std::to_string(big_rad) << std::endl;
+
+      if (!inner_circle_found && (left_oncoming_count > 15 || right_oncoming_count > 15)) {
+	turn_imminent_count++;
+      }
 
       const int edge_threshold = 29; // old value 45
       const int dist_threshold = 25;
@@ -344,10 +354,10 @@ class RealSenseCV : public rclcpp::Node
       if (min_distance < 5000) {
         dist_to_center = min_distance;
       }
-      std::cout << "MinDist= " << std::to_string(min_distance) << std::endl;
-      std::cout << "DistToCenter= " << std::to_string(dist_to_center) << std::endl;
-      std::cout << "MostSuccessful--R-Cedge-Cdist-Val-success: " << std::to_string(most_suc_r) << " " << std::to_string(most_suc_c_edge)
-		<< " " << std::to_string(most_suc_c_dist) << " " << std::to_string(dist_c) << success << std::endl;
+      // std::cout << "MinDist= " << std::to_string(min_distance) << std::endl;
+      // std::cout << "DistToCenter= " << std::to_string(dist_to_center) << std::endl;
+      // std::cout << "MostSuccessful--R-Cedge-Cdist-Val-success: " << std::to_string(most_suc_r) << " " << std::to_string(most_suc_c_edge)
+	    // 	<< " " << std::to_string(most_suc_c_dist) << " " << std::to_string(dist_c) << success << std::endl;
 
       /*
       std::vector<Vec4i> linesP;
@@ -360,10 +370,10 @@ class RealSenseCV : public rclcpp::Node
 	line(disp_dst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0,255), 2, LINE_AA);
       }
       */
-      
+
       imshow(depth_window_name, disp_dst);
       waitKey(3);
-      
+
     } // end function void get_distance
 
     void show_rgb_img(const sensor_msgs::msg::Image::SharedPtr msg)
@@ -372,12 +382,12 @@ class RealSenseCV : public rclcpp::Node
 
       int start = 0;
       while(box_cords[start] != 0 && start < 12)
-	{
-	  rectangle(rgb_img, Point(box_cords[start], box_cords[start+1]),
-		    Point(box_cords[start+2], box_cords[start+3]), Scalar(0,255,0));
-	  start += 4;
-	}
-      
+      {
+        rectangle(rgb_img, Point(box_cords[start], box_cords[start+1]),
+		  Point(box_cords[start+2], box_cords[start+3]), Scalar(0,255,0));
+	start += 4;
+      }
+
       imshow(rgb_window_name, rgb_img);
       waitKey(3);
     }
@@ -388,17 +398,17 @@ class RealSenseCV : public rclcpp::Node
       int i = 0;
       for (auto n : coordinates)
       {
-	std::cout << std::to_string(n) << ", ";
+	// std::cout << std::to_string(n) << ", ";
 	box_cords[i] = msg->data[i];
 	i++;
       }
-      std::cout << std::endl;
+      // std::cout << std::endl;
       for (i; i < 12; i++)
       {
-        box_cords[i] = 0;
+	box_cords[i] = 0;
       }
     }
-      
+
     void timer_callback()
     {
       // bool a = true;
@@ -413,36 +423,47 @@ class RealSenseCV : public rclcpp::Node
       header.stamp = this->now();
     }
 
-  void turn_timed_callback()
-  {
-    time_curr = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - time_start);
-    if (left_oncoming_count > 15) {
-      time_message.data = "LEFT";
-      if (!turning) {
-	time_start_turn = time_curr;
-      }
-      turning = true;
-      time_since_turn = (time_curr - time_start_turn).count();
-    } else if (right_oncoming_count > 15) {
-      time_message.data = "RIGHT";
-      if (!turning) {
-	time_start_turn = time_curr;
-      }
-      turning = true;
-      time_since_turn = (time_curr - time_start_turn).count();
-    } else {
-      time_message.data = "NONE";
-      turning = false;
-    }
-    time_header.stamp = this->now();
-    time_publisher_->publish(time_message);
+    void turn_timed_callback()
+    {
+      std::cout << "Reached turn_timed_callback - " << left_oncoming_count << " " << right_oncoming_count << " "
+		<< turn_imminent_count << std::endl;
+      time_curr = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - time_start);
 
-    if (time_since_turn >= 20) {
-      turning = false;
-      left_oncoming_count = 0;
-      right_oncoming_count = 0;
+      bool left_turn = (left_oncoming_count > 18 && left_oncoming_count >= right_oncoming_count) ? true : false;
+      bool right_turn = (right_oncoming_count > 18 && right_oncoming_count > left_oncoming_count) ? true : false;
+      
+      if (left_turn && turn_imminent_count > 500) {
+	time_message.data = "LEFT";
+	right_oncoming_count = 0;
+	if (!turning) {
+	  time_start_turn = time_curr;
+	}
+	turning = true;
+	time_since_turn = (time_curr - time_start_turn).count();
+	std::cout << "SENDING TURN MESSAGE LEFT" << std::endl;
+      } else if (right_turn && turn_imminent_count > 500) {
+	time_message.data = "RIGHT";
+	left_oncoming_count = 0;
+        if (!turning) {
+	  time_start_turn = time_curr;
+        }
+        turning = true;
+        time_since_turn = (time_curr - time_start_turn).count();
+        std::cout << "SENDING TURN MESSAGE RIGHT" << std::endl;
+      } else {
+        time_message.data = "NONE";
+        turning = false;
+      }
+      time_header.stamp = this->now();
+      time_publisher_->publish(time_message);
+
+      if (time_since_turn >= 80) {
+        turning = false;
+        left_oncoming_count = 0;
+        right_oncoming_count = 0;
+	time_since_turn = 0;
+      }
     }
-  }
 };
 
 int main(int argc, char ** argv)

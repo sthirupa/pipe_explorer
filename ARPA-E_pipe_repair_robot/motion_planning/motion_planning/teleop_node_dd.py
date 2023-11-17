@@ -27,6 +27,7 @@ class JoystickController(Node):
         self._joy_sub = self.create_subscription(Joy, '/joy', self._joy_callback, 1)
         self._stop_sub = self.create_subscription(String, '/threshold_warning', self._stop_callback, 10)
         self._keyboard_sub = self.create_subscription(String, '/robot_key_cmd', self._keyboard_callback, 1)
+        self._turn_sub = self.create_subscription(String, '/turn_ongoing', self._turn_callback, 5)
 
         timer_period = 1/100 # secs
         self._timer = self.create_timer(timer_period, self._cmd_callback)
@@ -43,6 +44,8 @@ class JoystickController(Node):
         self.top_wheel_cmd = 'S'
         self.prev_cmd = 'S'
         self.stop_command = 1.0
+        self.turn_state = 'NONE'
+        self.turning_count = 0;
 
     def _open_writer(self):
 
@@ -87,6 +90,12 @@ class JoystickController(Node):
         else: self.stop_command = 1.0
 
 
+    def _turn_callback(self, msg):
+        """ Callback from turn sytems for controls from perception data"""
+        self.turn_state = msg.data
+        self.get_logger().info('GOT THE TURNING MESSAGE it says: ' + msg.data)
+
+
     def _keyboard_callback(self, msg):
         """Callback from keyboard buttons system"""
         # s = 'Direction from input is ' + str(msg.data)
@@ -94,8 +103,8 @@ class JoystickController(Node):
 
         # Removed first msg.data check to have continuous movement for MRSD SVD on 20230417
         # Commented out two lines below, changed elif "SlOW" to if "SLOW, changed else to elif != "0"
-        # if msg.data == "0":
-        #     self._cmd_check = False
+        if msg.data == "0":
+            self._cmd_check = False
         if msg.data == "SLOW":
             self.speed_multiplier = 0.25
         elif msg.data == "MEDIUM" or msg.data == "NORMAL":
@@ -142,8 +151,8 @@ class JoystickController(Node):
                 l_cmd_vel.data = l_cmd_vel.data * self.stop_command
 
         elif self.fb_direction_multiplier == 0.0:
-            r_cmd_vel.data = -1.0 * self.lr_direction_multiplier * self.speed_multiplier * self.max_vel * self.stop_command
-            l_cmd_vel.data = -1.0 * self.lr_direction_multiplier * self.speed_multiplier * self.max_vel * self.stop_command
+            r_cmd_vel.data = (-0.450 + -0.300*self.lr_direction_multiplier) * self.speed_multiplier * self.max_vel * self.stop_command
+            l_cmd_vel.data = ( 0.450 + -0.300*self.lr_direction_multiplier) * self.speed_multiplier * self.max_vel * self.stop_command
         else:
             r_cmd_vel.data = 0.0
             l_cmd_vel.data = 0.0
@@ -151,6 +160,27 @@ class JoystickController(Node):
                 r_cmd_vel.data = self.fb_direction_multiplier * self.speed_multiplier * self.max_vel * self.stop_command
             elif self.lr_direction_multiplier == -1.0:
                 l_cmd_vel.data = self.fb_direction_multiplier * self.speed_multiplier * self.max_vel * self.stop_command
+
+        if self.turn_state == 'LEFT':
+            if self.turning_count % 200 < 104:
+                r_cmd_vel.data = -0.75 * self.max_vel * self.fb_direction_multiplier
+                l_cmd_vel.data = 0.150 * self.max_vel * self.fb_direction_multiplier
+            else:
+                r_cmd_vel.data = -0.75 * self.max_vel * self.fb_direction_multiplier
+                l_cmd_vel.data = 0.750 * self.max_vel * self.fb_direction_multiplier
+            self.get_logger().info('PROSCRIBED LEFT TURN ONGOING')
+            self.turning_count += 1
+        elif self.turn_state == 'RIGHT':
+            if self.turning_count % 200 < 40:
+                r_cmd_vel.data = -0.15 * self.max_vel * self.fb_direction_multiplier
+                l_cmd_vel.data = 0.750 * self.max_vel * self.fb_direction_multiplier
+            else:
+                r_cmd_vel.data = -0.75 * self.max_vel * self.fb_direction_multiplier
+                l_cmd_vel.data = 0.750 * self.max_vel * self.fb_direction_multiplier                
+            self.get_logger().info('PROSCRIBED RIGHT TURN ONGOING')
+            self.turning_count += 1
+        else:
+            self.turning_count = 0
 
         if self.serial_port_open and self.top_wheel_cmd != self.prev_cmd:
             print('top cmd, ', self.top_wheel_cmd)

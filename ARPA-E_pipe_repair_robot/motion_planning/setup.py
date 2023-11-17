@@ -24,6 +24,7 @@ setup(
         'console_scripts': [
             'teleop_node = motion_planning.teleop_node:main',
             'teleop_node_dd = motion_planning.teleop_node_dd:main',
+            'imu_extractor = motion_planning.imu_extractor:main',
         ],
     },
 )
